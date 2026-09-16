@@ -83,12 +83,26 @@
     .detail span { color: var(--muted); font-size: .7rem; margin-bottom: 4px; }
     .detail strong { font-size: .83rem; word-break: break-word; }
     .badge { display: inline-block; padding: 5px 8px; border-radius: 5px; background: #fff5bd; color: #705800; font-size: .68rem; font-weight: 850; }
-    .gmail-card { grid-column: 1/-1; padding: 22px; border-top: 5px solid #ea4335; }
-    .gmail-card h2 { margin: 0 0 18px; font-size: 1rem; }
-    .gmail-form { display: grid; gap: 14px; }
-    .gmail-row { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
-    .gmail-button { width: auto; justify-self: start; background: #ea4335; color: white; }
-    .gmail-button:hover { background: #c5221f; }
+    .compose-card { grid-column: 1/-1; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 22px; border-top: 5px solid #ea4335; }
+    .compose-card h2 { margin: 0 0 4px; font-size: 1rem; }
+    .compose-card p { margin: 0; color: var(--muted); font-size: .78rem; }
+    .compose-button { width: auto; flex: 0 0 auto; background: #ea4335; color: white; padding-inline: 22px; }
+    .compose-button:hover { background: #c5221f; }
+
+    .compose-overlay { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; padding: 18px; background: rgba(17,24,39,.48); }
+    .compose-window { width: min(570px,100%); background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 28px 80px rgba(0,0,0,.32); }
+    .compose-header { min-height: 48px; padding: 0 10px 0 16px; display: flex; align-items: center; justify-content: space-between; background: #404040; color: white; }
+    .compose-header strong { font-size: .84rem; }
+    .compose-close { width: 36px; height: 36px; border: 0; border-radius: 50%; background: transparent; color: white; font-size: 1.45rem; line-height: 1; }
+    .compose-close:hover { background: rgba(255,255,255,.14); }
+    .compose-form { display: grid; }
+    .compose-line { display: flex; align-items: center; border-bottom: 1px solid var(--line); }
+    .compose-line label { padding-left: 15px; color: var(--muted); font-size: .8rem; }
+    .compose-line input { flex: 1; min-width: 0; border: 0; padding: 12px 15px 12px 9px; outline: 0; }
+    .compose-message { width: 100%; min-height: 245px; border: 0; padding: 15px; resize: vertical; outline: 0; }
+    .compose-actions { padding: 12px 15px 15px; display: flex; align-items: center; gap: 10px; }
+    .send-gmail { width: auto; padding: 9px 22px; background: #0b57d0; color: white; border-radius: 20px; }
+    .send-gmail:hover { background: #0842a0; }
     .toast { position: fixed; right: 22px; bottom: 22px; padding: 11px 14px; border-left: 5px solid var(--yellow); background: var(--black); color: white; border-radius: 7px; box-shadow: 0 16px 38px rgba(0,0,0,.2); font-size: .78rem; opacity: 0; transform: translateY(12px); transition: .2s; pointer-events: none; z-index: 100; }
     .toast.show { opacity: 1; transform: translateY(0); }
 
@@ -105,8 +119,7 @@
       .dash-content { padding: 23px 15px 38px; }
       .cards { grid-template-columns: 1fr; }
       .account-card { grid-column: auto; }
-      .gmail-card { grid-column: auto; }
-      .gmail-row { grid-template-columns: 1fr; }
+      .compose-card { grid-column: auto; align-items: flex-start; flex-direction: column; }
       .details { grid-template-columns: 1fr; }
     }
   </style>
@@ -164,21 +177,26 @@
               <div class="detail"><span>ISU email</span><strong id="detailEmail"></strong></div>
             </div>
           </article>
-          <article class="card gmail-card">
-            <h2>Compose with Gmail</h2>
-            <form class="gmail-form" id="gmailForm">
-              <div class="gmail-row">
-                <div class="field"><label for="gmailTo">To</label><input id="gmailTo" type="email" autocomplete="email" required placeholder="recipient@example.com"></div>
-                <div class="field"><label for="gmailSubject">Subject</label><input id="gmailSubject" maxlength="150" placeholder="Enter a subject"></div>
-              </div>
-              <div class="field"><label for="gmailMessage">Message</label><textarea id="gmailMessage" maxlength="5000" placeholder="Write your message"></textarea></div>
-              <button class="primary gmail-button" type="submit">Open in Gmail</button>
-            </form>
+          <article class="card compose-card">
+            <div><h2>Gmail</h2><p>Write a new email from your signed-in Gmail account.</p></div>
+            <button class="primary compose-button" id="openCompose" type="button">Compose</button>
           </article>
         </section>
       </main>
     </div>
   </section>
+
+  <div class="compose-overlay hidden" id="composeModal" role="dialog" aria-modal="true" aria-labelledby="composeTitle">
+    <section class="compose-window">
+      <header class="compose-header"><strong id="composeTitle">New message</strong><button class="compose-close" id="closeCompose" type="button" aria-label="Close compose window">&times;</button></header>
+      <form class="compose-form" id="gmailForm">
+        <div class="compose-line"><label for="gmailTo">To</label><input id="gmailTo" type="email" autocomplete="email" required></div>
+        <div class="compose-line"><label for="gmailSubject">Subject</label><input id="gmailSubject" maxlength="150"></div>
+        <textarea class="compose-message" id="gmailMessage" maxlength="5000" aria-label="Message" placeholder="Write your message"></textarea>
+        <div class="compose-actions"><button class="primary send-gmail" type="submit">Send with Gmail</button></div>
+      </form>
+    </section>
+  </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script>
@@ -247,6 +265,14 @@
       openDashboard(account);
     });
 
+    const composeModal = document.getElementById('composeModal');
+    function openComposeModal() { composeModal.classList.remove('hidden'); document.getElementById('gmailTo').focus(); }
+    function closeComposeModal() { composeModal.classList.add('hidden'); }
+    document.getElementById('openCompose').addEventListener('click', openComposeModal);
+    document.getElementById('closeCompose').addEventListener('click', closeComposeModal);
+    composeModal.addEventListener('click', event => { if (event.target === composeModal) closeComposeModal(); });
+    document.addEventListener('keydown', event => { if (event.key === 'Escape' && !composeModal.classList.contains('hidden')) closeComposeModal(); });
+
     document.getElementById('gmailForm').addEventListener('submit', event => {
       event.preventDefault();
       const url = new URL('https://mail.google.com/mail/');
@@ -255,10 +281,14 @@
       url.searchParams.set('to', document.getElementById('gmailTo').value.trim());
       url.searchParams.set('su', document.getElementById('gmailSubject').value.trim());
       url.searchParams.set('body', document.getElementById('gmailMessage').value.trim());
-      window.open(url.toString(), '_blank', 'noopener,noreferrer');
+      const gmailWindow = window.open(url.toString(), '_blank');
+      if (gmailWindow) gmailWindow.opener = null;
+      else window.location.href = url.toString();
+      event.target.reset();
+      closeComposeModal();
     });
 
-    document.getElementById('signOut').addEventListener('click', () => { sessionStorage.removeItem(SESSION_KEY); openAuth(); showToast('Signed out.'); });
+    document.getElementById('signOut').addEventListener('click', () => { sessionStorage.removeItem(SESSION_KEY); closeComposeModal(); openAuth(); showToast('Signed out.'); });
     const sessionEmail = sessionStorage.getItem(SESSION_KEY);
     const sessionAccount = accounts().find(item => item.email === sessionEmail);
     if (sessionAccount) openDashboard(sessionAccount);
