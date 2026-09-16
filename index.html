@@ -25,7 +25,7 @@
 
     * { box-sizing: border-box; }
     body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--page); color: var(--text); font: 16px/1.5 Arial, Helvetica, sans-serif; }
-    button, input, select { font: inherit; }
+    button, input, select, textarea { font: inherit; }
     button { color: inherit; cursor: pointer; }
     :focus-visible { outline: 3px solid rgba(250,204,21,.55); outline-offset: 2px; }
     .hidden { display: none !important; }
@@ -44,8 +44,9 @@
     .auth-card > p { margin: 0 0 25px; color: var(--muted); font-size: .88rem; }
     .form { display: grid; gap: 15px; }
     .field label { display: block; margin-bottom: 6px; font-size: .78rem; font-weight: 750; }
-    .field input, .field select { width: 100%; border: 1px solid var(--line); background: white; border-radius: 8px; padding: 11px 12px; color: var(--text); }
-    .field input:focus, .field select:focus { border-color: var(--yellow-hover); }
+    .field input, .field select, .field textarea { width: 100%; border: 1px solid var(--line); background: white; border-radius: 8px; padding: 11px 12px; color: var(--text); }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--yellow-hover); }
+    .field textarea { min-height: 125px; resize: vertical; }
     .email-field { display: grid; grid-template-columns: minmax(0,1fr) auto; }
     .email-field input { border-radius: 8px 0 0 8px; }
     .email-domain { display: flex; align-items: center; padding: 0 11px; border: 1px solid var(--line); border-left: 0; border-radius: 0 8px 8px 0; background: #f7f7f7; color: #555; font-size: .8rem; white-space: nowrap; }
@@ -82,6 +83,12 @@
     .detail span { color: var(--muted); font-size: .7rem; margin-bottom: 4px; }
     .detail strong { font-size: .83rem; word-break: break-word; }
     .badge { display: inline-block; padding: 5px 8px; border-radius: 5px; background: #fff5bd; color: #705800; font-size: .68rem; font-weight: 850; }
+    .gmail-card { grid-column: 1/-1; padding: 22px; border-top: 5px solid #ea4335; }
+    .gmail-card h2 { margin: 0 0 18px; font-size: 1rem; }
+    .gmail-form { display: grid; gap: 14px; }
+    .gmail-row { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
+    .gmail-button { width: auto; justify-self: start; background: #ea4335; color: white; }
+    .gmail-button:hover { background: #c5221f; }
     .toast { position: fixed; right: 22px; bottom: 22px; padding: 11px 14px; border-left: 5px solid var(--yellow); background: var(--black); color: white; border-radius: 7px; box-shadow: 0 16px 38px rgba(0,0,0,.2); font-size: .78rem; opacity: 0; transform: translateY(12px); transition: .2s; pointer-events: none; z-index: 100; }
     .toast.show { opacity: 1; transform: translateY(0); }
 
@@ -98,6 +105,8 @@
       .dash-content { padding: 23px 15px 38px; }
       .cards { grid-template-columns: 1fr; }
       .account-card { grid-column: auto; }
+      .gmail-card { grid-column: auto; }
+      .gmail-row { grid-template-columns: 1fr; }
       .details { grid-template-columns: 1fr; }
     }
   </style>
@@ -139,7 +148,7 @@
   </section>
 
   <section class="dashboard hidden" id="dashboardView">
-    <aside class="sidebar"><div class="brand"><img class="brand-logo" src="isu-logo.jpg" alt="Isabela State University seal"><span>ISU Portal</span></div><nav class="side-nav"><div class="active">Dashboard</div><div>Account</div></nav><div class="side-profile"><strong id="sideName"></strong><span id="sideEmail"></span></div></aside>
+    <aside class="sidebar"><div class="brand"><img class="brand-logo" src="isu-logo.jpg" alt="Isabela State University seal"><span>ISU Portal</span></div><nav class="side-nav"><div class="active">Dashboard</div><div>Account</div><div>Compose Gmail</div></nav><div class="side-profile"><strong id="sideName"></strong><span id="sideEmail"></span></div></aside>
     <div class="main">
       <header class="topbar"><button class="signout" id="signOut">Sign out</button></header>
       <main class="dash-content">
@@ -154,6 +163,17 @@
               <div class="detail"><span>Name</span><strong id="detailName"></strong></div>
               <div class="detail"><span>ISU email</span><strong id="detailEmail"></strong></div>
             </div>
+          </article>
+          <article class="card gmail-card">
+            <h2>Compose with Gmail</h2>
+            <form class="gmail-form" id="gmailForm">
+              <div class="gmail-row">
+                <div class="field"><label for="gmailTo">To</label><input id="gmailTo" type="email" autocomplete="email" required placeholder="recipient@example.com"></div>
+                <div class="field"><label for="gmailSubject">Subject</label><input id="gmailSubject" maxlength="150" placeholder="Enter a subject"></div>
+              </div>
+              <div class="field"><label for="gmailMessage">Message</label><textarea id="gmailMessage" maxlength="5000" placeholder="Write your message"></textarea></div>
+              <button class="primary gmail-button" type="submit">Open in Gmail</button>
+            </form>
           </article>
         </section>
       </main>
@@ -225,6 +245,17 @@
       sessionStorage.setItem(SESSION_KEY, account.email);
       document.getElementById('loginPassword').value = '';
       openDashboard(account);
+    });
+
+    document.getElementById('gmailForm').addEventListener('submit', event => {
+      event.preventDefault();
+      const url = new URL('https://mail.google.com/mail/');
+      url.searchParams.set('view', 'cm');
+      url.searchParams.set('fs', '1');
+      url.searchParams.set('to', document.getElementById('gmailTo').value.trim());
+      url.searchParams.set('su', document.getElementById('gmailSubject').value.trim());
+      url.searchParams.set('body', document.getElementById('gmailMessage').value.trim());
+      window.open(url.toString(), '_blank', 'noopener,noreferrer');
     });
 
     document.getElementById('signOut').addEventListener('click', () => { sessionStorage.removeItem(SESSION_KEY); openAuth(); showToast('Signed out.'); });
